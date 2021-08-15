@@ -1,0 +1,1 @@
+add_executable(static_assert_test static_assert_test.cpp)

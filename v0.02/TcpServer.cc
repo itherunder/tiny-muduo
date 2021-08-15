@@ -1,33 +1,14 @@
-#include <unistd.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <sys/epoll.h>
+#include "TcpServer.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
+TcpServer::TcpServer() {
+    cout << "TcpServer ..." << endl;
+}
 
-#include <iostream>
-#include <vector>
-#include <algorithm>
+TcpServer::~TcpServer() {
+    cout << "~TcpServer ..." << endl;
+}
 
-using namespace std;
-
-typedef vector<epoll_event> EventList;
-
-#define ERR_EXIT(m) \
-        do { \
-            perror(m); \
-            exit(EXIT_FAILURE); \
-        } while(0)
-
-int main() {
+void TcpServer::Start() {
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
 
@@ -36,51 +17,51 @@ int main() {
     
     if ((listen_fd = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP)) < 0)
         ERR_EXIT("socket");
-
+    
     sockaddr_in srv_addr;
-    memset(&srv_addr, 0, sizeof(srv_addr));
+    bzero(&srv_addr, sizeof(srv_addr));
     srv_addr.sin_family = AF_INET;
     srv_addr.sin_port = htons(1116);
     srv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     int on = 1;
     if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
-        ERR_EXIT("setsockopt");
+        ERR_EXIT("socket");
 
     if (bind(listen_fd, (sockaddr*)&srv_addr, sizeof(srv_addr)) < 0)
         ERR_EXIT("bind");
     
     if (listen(listen_fd, SOMAXCONN) < 0)
         ERR_EXIT("listen");
-    
+
     int epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+    if (epoll_fd < 0)
+        ERR_EXIT("epoll_create1");
 
     epoll_event event;
     event.data.fd = listen_fd;
     event.events = EPOLLIN | EPOLLET;
     epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_fd, &event);
 
-    EventList events(16);
-    sockaddr_in peer_addr;
-    socklen_t peer_len;
+    EventList events(MAX_EVENTS);
     int conn_fd;
+    sockaddr_in peer_addr;
+    socklen_t  peer_len;
 
     int nready;
     while (true) {
         nready = epoll_wait(epoll_fd, &*events.begin(), static_cast<int>(events.size()), -1);
-        if (nready == -1) {
-            if (errno == EINTR)
-                continue;
+        if (nready == -1)
             ERR_EXIT("epoll_wait");
-        }
         if (nready == 0)
             continue;
         if (nready == static_cast<int>(events.size()))
             events.resize(nready * 2);
-
+        
         for (int i = 0; i < nready; ++i) {
             if (events[i].data.fd == listen_fd) {
                 peer_len = sizeof(peer_addr);
+                //设置成non-block io
                 conn_fd = accept4(listen_fd, (sockaddr*)&peer_addr,
                         &peer_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
                 if (conn_fd == -1) {
@@ -117,12 +98,7 @@ int main() {
                 continue;
             }
             cout << buf << endl;
-            ret = write(conn_fd, buf, strlen(buf));
-            if (ret == -1)
-                ERR_EXIT("write");
-            if (ret < strlen(buf))
-                ERR_EXIT("write not finish one time");
+            write(conn_fd, buf, strlen(buf));
         }
     }
-    return 0;
 }
