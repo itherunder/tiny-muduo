@@ -10,7 +10,6 @@ TcpServer::TcpServer()
 
 TcpServer::~TcpServer() {
     cout << "~TcpServer ..." << endl;
-
 }
 
 /*
@@ -58,6 +57,7 @@ int TcpServer::CreateAndListen() {
 /*
 * 继承自 IChannelCallBack，可以用用于处理 EPOLLIN
 * 只需要在对应的 Channel 中将 this 指针存入其 callBack_
+* 目前还只是一个 echo 服务器
 */
 void TcpServer::OnIn(int sockFd) {
     cout << "OnIn: " << sockFd << endl;
