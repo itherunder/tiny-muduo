@@ -9,11 +9,13 @@ public:
     ~Channel();
     void SetCallBack(IChannelCallBack* callBack);
     void HandleEvent();
-    void SetRevents(int event);
+    void SetRevents(int revents);
     int GetSockFd();
     void EnableReading();
+    void Close();
 
 private:
+    void Update();
     int epollFd_;
     int sockFd_;
     int events_;

@@ -1,7 +1,8 @@
 #ifndef _TCP_SERVER_H_
 #define _TCP_SERVER_H_
 
-#include "IChannelCallBack"
+#include "IChannelCallBack.h"
+#include "Channel.h"
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -25,6 +26,8 @@
 using namespace std;
 
 #define MAX_EVENTS 500
+#define INIT_EVENTS 16
+#define MAX_BUFFER 1024
 
 #define ERR_EXIT(m) \
         do { \
@@ -42,11 +45,14 @@ public:
     virtual void OnIn(int sockFd);
 
 private:
-    void update(Channel* pChannel, int op);
+    int CreateAndListen();
+    void Update(Channel* pChannel, int op);
 
     int epollFd_;
     int listenFd_;
-    epoll_event events_[MAX_EVENTS];
+    int idleFd_;
+    // epoll_event events_[MAX_EVENTS];
+    EventList events_;
     unordered_map<int, Channel*> channels_;
 };
 

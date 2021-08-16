@@ -120,7 +120,7 @@ int main() {
             ret = write(conn_fd, buf, strlen(buf));
             if (ret == -1)
                 ERR_EXIT("write");
-            if (ret < strlen(buf))
+            if (ret < static_cast<int>(strlen(buf)))
                 ERR_EXIT("write not finish one time");
         }
     }

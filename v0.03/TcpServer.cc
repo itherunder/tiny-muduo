@@ -1,21 +1,28 @@
 #include "TcpServer.h"
 
-TcpServer::TcpServer() {
+TcpServer::TcpServer()
+    : epollFd_(0)
+    , listenFd_(0)
+    , idleFd_(0)
+    , events_(INIT_EVENTS) {
     cout << "TcpServer ..." << endl;
 }
 
 TcpServer::~TcpServer() {
     cout << "~TcpServer ..." << endl;
+
 }
 
-void TcpServer::Start() {
+/*
+* 这里把创建了epollFd_, listenFd_ 并添加了listenFd_ 的Channel
+*/
+int TcpServer::CreateAndListen() {
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
 
-    int idle_fd = open("/dev/null", O_RDONLY | O_CLOEXEC);
-    int listen_fd = 0;
+    idleFd_ = open("/dev/null", O_RDONLY | O_CLOEXEC);
     
-    if ((listen_fd = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP)) < 0)
+    if ((listenFd_ = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP)) < 0)
         ERR_EXIT("socket");
     
     sockaddr_in srv_addr;
@@ -25,80 +32,108 @@ void TcpServer::Start() {
     srv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     int on = 1;
-    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
+    if (setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
         ERR_EXIT("socket");
 
-    if (bind(listen_fd, (sockaddr*)&srv_addr, sizeof(srv_addr)) < 0)
+    if (bind(listenFd_, (sockaddr*)&srv_addr, sizeof(srv_addr)) < 0)
         ERR_EXIT("bind");
     
-    if (listen(listen_fd, SOMAXCONN) < 0)
+    if (listen(listenFd_, SOMAXCONN) < 0)
         ERR_EXIT("listen");
 
-    int epoll_fd = epoll_create1(EPOLL_CLOEXEC);
-    if (epoll_fd < 0)
+    epollFd_ = epoll_create1(EPOLL_CLOEXEC);
+    if (epollFd_ < 0)
         ERR_EXIT("epoll_create1");
 
-    epoll_event event;
-    event.data.fd = listen_fd;
-    event.events = EPOLLIN | EPOLLET;
-    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_fd, &event);
+    Channel* pChannel = new Channel(epollFd_, listenFd_);
+    pChannel->SetCallBack(this);
+    pChannel->EnableReading();
 
-    EventList events(MAX_EVENTS);
-    int conn_fd;
-    sockaddr_in peer_addr;
-    socklen_t  peer_len;
+    //在close 的时候可以回收对应的Channel
+    channels_[listenFd_] = pChannel;
 
-    int nready;
+    return listenFd_;
+}
+
+/*
+* 继承自 IChannelCallBack，可以用用于处理 EPOLLIN
+* 只需要在对应的 Channel 中将 this 指针存入其 callBack_
+*/
+void TcpServer::OnIn(int sockFd) {
+    cout << "OnIn: " << sockFd << endl;
+    if (sockFd == listenFd_) {
+        int connFd;
+        sockaddr_in cliAddr;
+        socklen_t cliLen;
+
+        cliLen = sizeof(cliAddr);
+        //设置成non-block io
+        connFd = accept4(listenFd_, (sockaddr*)&cliAddr,
+                &cliLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
+        if (connFd == -1) {
+            if (errno == EMFILE) {
+                close(idleFd_);
+                if ((connFd = accept(listenFd_, NULL, NULL)))
+                    ERR_EXIT("accept");
+                close(connFd);
+                idleFd_ = open("/dev/null", O_RDONLY | O_CLOEXEC);
+            }
+            else
+                ERR_EXIT("accept4");
+        }
+
+        Channel* pChannel = new Channel(epollFd_, connFd);
+        pChannel->SetCallBack(this);
+        pChannel->EnableReading();
+        
+        channels_[connFd] = pChannel;
+
+        //连接成功
+        cout << "ip=" << inet_ntoa(cliAddr.sin_addr) << 
+            " port=" << ntohs(cliAddr.sin_port) << endl;
+    } else {
+        if (sockFd < 0)
+            ERR_EXIT("EPOLLIN sockFd < 0 error");
+        char buf[MAX_BUFFER] = {0};
+        int ret = read(sockFd, buf, sizeof(buf));
+        if (ret == -1)
+            ERR_EXIT("read");
+        if (ret == 0) {
+            cout << "client closed" << endl;
+            Channel* pChannel = channels_[sockFd];
+            pChannel->Close();//调用epoll_ctl 删除该事件
+            close(sockFd);//记得关闭
+            delete pChannel;//删除对应的Channel
+            channels_.erase(sockFd);
+            return;//记得返回
+        }
+        cout << buf << endl;
+        ret = write(sockFd, buf, strlen(buf));
+        if (ret == -1)
+            ERR_EXIT("write");
+        if (ret < static_cast<int>(strlen(buf)))
+            ERR_EXIT("write not finish one time");
+    }
+}
+
+void TcpServer::Start() {
+    listenFd_ = CreateAndListen();
     while (true) {
-        nready = epoll_wait(epoll_fd, &*events.begin(), static_cast<int>(events.size()), -1);
+        int nready = epoll_wait(epollFd_, &*events_.begin(), static_cast<int>(events_.size()), -1);
         if (nready == -1)
             ERR_EXIT("epoll_wait");
         if (nready == 0)
             continue;
-        if (nready == static_cast<int>(events.size()))
-            events.resize(nready * 2);
-        
+        if (nready == static_cast<int>(events_.size()))
+            events_.resize(nready * 2);
+
+        vector<Channel*> channels;//先把指针存起来，最后再一个一个调HandleEvent
         for (int i = 0; i < nready; ++i) {
-            if (events[i].data.fd == listen_fd) {
-                peer_len = sizeof(peer_addr);
-                //设置成non-block io
-                conn_fd = accept4(listen_fd, (sockaddr*)&peer_addr,
-                        &peer_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
-                if (conn_fd == -1) {
-                    if (errno == EMFILE) {
-                        close(idle_fd);
-                        if ((conn_fd = accept(listen_fd, NULL, NULL)))
-                            ERR_EXIT("accept");
-                        close(conn_fd);
-                        idle_fd = open("/dev/null", O_RDONLY | O_CLOEXEC);
-                        continue;
-                    }
-                    else
-                        ERR_EXIT("accept4");
-                }
-
-                event.data.fd = conn_fd, 
-                event.events = EPOLLIN | EPOLLET;
-                epoll_ctl(epoll_fd, EPOLL_CTL_ADD, conn_fd, &event);
-
-                //连接成功
-                cout << "ip=" << inet_ntoa(peer_addr.sin_addr) << 
-                    " port=" << ntohs(peer_addr.sin_port) << endl;
-                continue;
-            }
-            conn_fd = events[i].data.fd;
-            char buf[1024] = {0};
-            int ret = read(conn_fd, buf, sizeof(buf));
-            if (ret == -1)
-                ERR_EXIT("read");
-            if (ret == 0) {
-                cout << "client closed" << endl;
-                epoll_ctl(epoll_fd, EPOLL_CTL_DEL, conn_fd, &*(events.begin() + i));
-                close(conn_fd); //记得关闭
-                continue;
-            }
-            cout << buf << endl;
-            write(conn_fd, buf, strlen(buf));
+            Channel* pChannel = static_cast<Channel*>(events_[i].data.ptr);
+            pChannel->SetRevents(events_[i].events);
+            channels.push_back(pChannel);
         }
+        for (Channel* pChannel : channels)
+            pChannel->HandleEvent();
     }
 }
