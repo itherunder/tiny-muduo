@@ -8,5 +8,5 @@ string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
-add_executable(srv main.cc TcpServer.cc Channel.cc)
+add_executable(srv main.cc TcpServer.cc Channel.cc Acceptor.cc TcpConnection.cc)
 add_executable(cli cli.cc)

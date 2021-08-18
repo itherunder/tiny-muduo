@@ -2,20 +2,31 @@
 #include "Headers.h"
 
 Acceptor::Acceptor(int epollFd)
-    : epollFd_(epollFd) {
+    : epollFd_(epollFd)
+    , listenFd_(0)
+    , idleFd_(0)
+    , acceptChannel_(nullptr)
+    , callBack_(nullptr) {
     cout << "Acceptor ..." << endl;
 }
 
 Acceptor::~Acceptor() {
+    if (acceptChannel_) {
+        delete acceptChannel_;
+        acceptChannel_ = nullptr;
+    }
     cout << "~Acceptor ..." << endl;
 }
 
-void Acceptor::SetCallBack(IChannelCallBack* callBack) {
-
+void Acceptor::SetCallBack(IAcceptorCallBack* callBack) {
+    callBack_ = callBack;
 }
 
 void Acceptor::Start() {
-    
+    listenFd_ = CreateAndListen();
+    acceptChannel_ = new Channel(epollFd_, listenFd_);
+    acceptChannel_->SetCallBack(this);
+    acceptChannel_->EnableReading();
 }
 
 /*
@@ -23,7 +34,8 @@ void Acceptor::Start() {
 * 只需要在对应的 Channel 中将 this 指针存入其 callBack_
 * 目前还只是一个 echo 服务器
 */
-void Acceptor::OnIn(int sockFd) {
+void Acceptor::OnIn(int sockFd) {//这个sockFd就是lisenFd，没有用
+    cout << "OnIn Listen From: " << sockFd << endl;
     int connFd;
     sockaddr_in cliAddr;
     socklen_t cliLen;
@@ -44,9 +56,6 @@ void Acceptor::OnIn(int sockFd) {
             ERR_EXIT("accept4");
     }
 
-    Channel* pChannel = new Channel(epollFd_, connFd);
-    pChannel->SetCallBack(this);
-    pChannel->EnableReading();
     callBack_->NewConnection(connFd);
 
     //连接成功

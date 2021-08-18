@@ -10,7 +10,7 @@ class Acceptor : public IChannelCallBack {
 public:
     Acceptor(int epollFd);
     ~Acceptor();
-    void SetCallBack(IChannelCallBack* callBack);
+    void SetCallBack(IAcceptorCallBack* callBack);
     void Start();
     virtual void OnIn(int sockFd);
 

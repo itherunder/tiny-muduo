@@ -21,7 +21,6 @@ private:
     void Update(Channel* pChannel, int op);
 
     int epollFd_;
-    int idleFd_;
     // epoll_event events_[MAX_EVENTS];
     EventList events_;
     unordered_map<int, TcpConnection*> connections_;

@@ -6,7 +6,7 @@
 
 class TcpConnection : public IChannelCallBack {
 public:
-    TcpConnection(/* args */);
+    TcpConnection(int epollFd, int sockFd);
     ~TcpConnection();
     virtual void OnIn(int sockFd);
 
@@ -15,6 +15,5 @@ private:
     int sockFd_;
     Channel* channel_;
 };
-
 
 #endif //_TCP_CONNECTION_H_

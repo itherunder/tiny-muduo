@@ -11,12 +11,13 @@ Channel::Channel(int epollFd, int sockFd)
     , sockFd_(sockFd)
     , events_(0)
     , revents_(0)
+    , closed_(false)
     , callBack_(nullptr) {
     cout << "Channel ..." << endl;
 }
 
 Channel::~Channel() {
-    Close();//从epoll中注销
+    if (!closed_) Close();//从epoll中注销
     cout << "~Channel ..." << endl;
 }
 
@@ -45,6 +46,11 @@ void Channel::EnableReading() {
 void Channel::Close() {
     //2.6.9版本后最后的 struct epoll_event & 参数可以为空指针
     epoll_ctl(epollFd_, EPOLL_CTL_DEL, sockFd_, nullptr);
+    closed_ = true;//表示该Channel 监听的fd 已经关闭
+}
+
+bool Channel::IsClosed() {
+    return closed_;
 }
 
 void Channel::Update() {

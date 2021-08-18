@@ -13,6 +13,7 @@ public:
     int GetSockFd();
     void EnableReading();
     void Close();
+    bool IsClosed();
 
 private:
     void Update();
@@ -20,6 +21,7 @@ private:
     int sockFd_;
     int events_;
     int revents_;
+    bool closed_;
     IChannelCallBack* callBack_;
 };
 

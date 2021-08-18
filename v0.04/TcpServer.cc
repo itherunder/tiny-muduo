@@ -2,45 +2,30 @@
 
 TcpServer::TcpServer()
     : epollFd_(0)
-    , idleFd_(0)
-    , events_(INIT_EVENTS) {
+    , events_(INIT_EVENTS)
+    , acceptor_(nullptr) {
     cout << "TcpServer ..." << endl;
 }
 
 TcpServer::~TcpServer() {
     //内存回收
-    for (auto it = connections_.begin(); it != connections_.end(); ++it)
-        if (it->second) delete it->second;
+    for (auto it = connections_.begin(); it != connections_.end(); ++it) {
+        if (it->second) {
+            delete it->second;
+            it->second = nullptr;
+        }
+    }
+    if (acceptor_) {
+        delete acceptor_;
+        acceptor_ = nullptr;
+    }
     cout << "~TcpServer ..." << endl;
 }
 
-void TcpServer::OnIn(int sockFd) {
-    cout << "OnIn: " << sockFd << endl;
-    if (sockFd == listenFd_) {
-        
-    } else {
-        if (sockFd < 0)
-            ERR_EXIT("EPOLLIN sockFd < 0 error");
-        char buf[MAX_BUFFER] = {0};
-        int ret = read(sockFd, buf, sizeof(buf));
-        if (ret == -1)
-            ERR_EXIT("read");
-        if (ret == 0) {
-            cout << "client closed" << endl;
-            Channel* pChannel = channels_[sockFd];
-            pChannel->Close();//调用epoll_ctl 删除该事件
-            close(sockFd);//记得关闭
-            delete pChannel;//删除对应的Channel
-            channels_.erase(sockFd);
-            return;//记得返回
-        }
-        cout << buf << endl;
-        ret = write(sockFd, buf, strlen(buf));
-        if (ret == -1)
-            ERR_EXIT("write");
-        if (ret < static_cast<int>(strlen(buf)))
-            ERR_EXIT("write not finish one time");
-    }
+void TcpServer::NewConnection(int sockFd) {
+    //每个new 都要记得回收
+    TcpConnection* connection = new TcpConnection(epollFd_, sockFd);
+    connections_[sockFd] = connection;
 }
 
 void TcpServer::Start() {
@@ -66,7 +51,18 @@ void TcpServer::Start() {
             pChannel->SetRevents(events_[i].events);
             channels.push_back(pChannel);
         }
-        for (Channel* pChannel : channels)
+        for (Channel* pChannel : channels) {
             pChannel->HandleEvent();
+            if (pChannel->IsClosed()) {//处理完事件后，如果该fd 已经close 了就回收内存
+                int fd = pChannel->GetSockFd();
+                if (connections_.count(fd)) {
+                    if (connections_[fd]) {
+                        delete connections_[fd];
+                        connections_[fd] = nullptr;
+                    }
+                    connections_.erase(fd);
+                }
+            }
+        }
     }
 }
