@@ -2,26 +2,30 @@
 #define _CHANNEL_H_
 
 #include "IChannelCallBack.h"
+#include "EventLoop.h"
+#include "Headers.h"
+#include "Define.h"
 
 class Channel {
 public:
-    Channel(int epollFd, int sockFd);
-    ~Channel();
+    Channel(EventLoop* loop, int sockFd);
+    virtual ~Channel();
     void SetCallBack(IChannelCallBack* callBack);
     void HandleEvent();
     void SetRevents(int revents);
     int GetSockFd();
+    int GetEvents();
     void EnableReading();
     void Close();
     bool IsClosed();
 
 private:
-    void Update();
-    int epollFd_;
+    void Update(int op);
     int sockFd_;
     int events_;
     int revents_;
     bool closed_;
+    EventLoop* loop_;
     IChannelCallBack* callBack_;
 };
 

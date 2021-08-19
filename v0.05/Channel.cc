@@ -1,24 +1,18 @@
 #include "Channel.h"
 
-#include <sys/epoll.h>
-
-#include <iostream>
-
-using namespace std;
-
-Channel::Channel(int epollFd, int sockFd)
-    : epollFd_(epollFd)
-    , sockFd_(sockFd)
+Channel::Channel(EventLoop* loop, int sockFd)
+    : sockFd_(sockFd)
     , events_(0)
     , revents_(0)
     , closed_(false)
+    , loop_(loop)
     , callBack_(nullptr) {
-    cout << "Channel ..." << endl;
+    cout << "[CONS] Channel ..." << endl;
 }
 
 Channel::~Channel() {
     if (!closed_) Close();//从epoll中注销
-    cout << "~Channel ..." << endl;
+    cout << "[DECO] ~Channel ..." << endl;
 }
 
 void Channel::SetCallBack(IChannelCallBack* callBack) {
@@ -38,14 +32,18 @@ int Channel::GetSockFd() {
     return sockFd_;
 }
 
+int Channel::GetEvents() {
+    return events_;
+}
+
 void Channel::EnableReading() {
     events_ |= EPOLLIN;//默认还是边沿触发的
-    Update();
+    Update(EPOLL_CTL_ADD);
 }
 
 void Channel::Close() {
     //2.6.9版本后最后的 struct epoll_event & 参数可以为空指针
-    epoll_ctl(epollFd_, EPOLL_CTL_DEL, sockFd_, nullptr);
+    loop_->Update(this, EPOLL_CTL_DEL);
     closed_ = true;//表示该Channel 监听的fd 已经关闭
 }
 
@@ -53,9 +51,6 @@ bool Channel::IsClosed() {
     return closed_;
 }
 
-void Channel::Update() {
-    epoll_event event;
-    event.data.ptr = this;
-    event.events = events_;
-    epoll_ctl(epollFd_, EPOLL_CTL_ADD, sockFd_, &event);
+void Channel::Update(int op) {
+    loop_->Update(this, op);
 }

@@ -1,4 +1,13 @@
 
+class Acceptor;
+class Channel;
+class Epoll;
+class EventLoop;
+class IAcceptorCallBack;
+class IChannelCallBack;
+class TcpConnection;
+class TcpServer;
+
 #define MAX_EVENTS 500
 #define INIT_EVENTS 16
 #define MAX_BUFFER 1024

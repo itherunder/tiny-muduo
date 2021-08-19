@@ -3,13 +3,15 @@
 
 #include "IChannelCallBack.h"
 #include "IAcceptorCallBack.h"
+#include "EventLoop.h"
 #include "Channel.h"
+#include "Headers.h"
 #include "Define.h"
 
 class Acceptor : public IChannelCallBack {
 public:
-    Acceptor(int epollFd);
-    ~Acceptor();
+    Acceptor(EventLoop* loop);
+    virtual ~Acceptor();
     void SetCallBack(IAcceptorCallBack* callBack);
     void Start();
     virtual void OnIn(int sockFd);
@@ -17,9 +19,9 @@ public:
 private:
     int CreateAndListen();
 
-    int epollFd_;
     int listenFd_;
     int idleFd_;
+    EventLoop* loop_;
     Channel* acceptChannel_;
     IAcceptorCallBack* callBack_;
 };

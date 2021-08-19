@@ -19,3 +19,5 @@
 #include <algorithm>
 
 using namespace std;
+
+typedef vector<epoll_event> EventList;

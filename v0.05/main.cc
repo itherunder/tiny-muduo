@@ -1,7 +1,9 @@
 #include "TcpServer.h"
 
 int main() {
-    TcpServer server;
+    EventLoop loop;
+    TcpServer server(&loop);
     server.Start();
+    loop.Loop();
     return 0;
 }

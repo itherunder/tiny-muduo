@@ -4,26 +4,22 @@
 #include "IAcceptorCallBack.h"
 #include "Acceptor.h"
 #include "TcpConnection.h"
+#include "EventLoop.h"
 #include "Headers.h"
+#include "Define.h"
 
 using namespace std;
 
-typedef vector<epoll_event> EventList;
-
 class TcpServer : public IAcceptorCallBack {
 public:
-    TcpServer();
-    ~TcpServer();
+    TcpServer(EventLoop* loop);
+    virtual ~TcpServer();
     void Start();
     virtual void NewConnection(int sockFd);
 
 private:
-    void Update(Channel* pChannel, int op);
-
-    int epollFd_;
-    // epoll_event events_[MAX_EVENTS];
-    EventList events_;
     unordered_map<int, TcpConnection*> connections_;
+    EventLoop* loop_;
     Acceptor* acceptor_;
 };
 

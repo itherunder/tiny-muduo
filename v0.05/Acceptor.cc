@@ -1,13 +1,12 @@
 #include "Acceptor.h"
-#include "Headers.h"
 
-Acceptor::Acceptor(int epollFd)
-    : epollFd_(epollFd)
-    , listenFd_(0)
+Acceptor::Acceptor(EventLoop* loop)
+    : listenFd_(0)
     , idleFd_(0)
+    , loop_(loop)
     , acceptChannel_(nullptr)
     , callBack_(nullptr) {
-    cout << "Acceptor ..." << endl;
+    cout << "[CONS] Acceptor ..." << endl;
 }
 
 Acceptor::~Acceptor() {
@@ -15,7 +14,7 @@ Acceptor::~Acceptor() {
         delete acceptChannel_;
         acceptChannel_ = nullptr;
     }
-    cout << "~Acceptor ..." << endl;
+    cout << "[DECO] ~Acceptor ..." << endl;
 }
 
 void Acceptor::SetCallBack(IAcceptorCallBack* callBack) {
@@ -24,7 +23,7 @@ void Acceptor::SetCallBack(IAcceptorCallBack* callBack) {
 
 void Acceptor::Start() {
     listenFd_ = CreateAndListen();
-    acceptChannel_ = new Channel(epollFd_, listenFd_);
+    acceptChannel_ = new Channel(loop_, listenFd_);
     acceptChannel_->SetCallBack(this);
     acceptChannel_->EnableReading();
 }
@@ -35,7 +34,7 @@ void Acceptor::Start() {
 * 目前还只是一个 echo 服务器
 */
 void Acceptor::OnIn(int sockFd) {//这个sockFd就是lisenFd，没有用
-    cout << "OnIn Listen From: " << sockFd << endl;
+    cout << "[INFO] OnIn Listen From: " << sockFd << endl;
     int connFd;
     sockaddr_in cliAddr;
     socklen_t cliLen;
@@ -48,18 +47,18 @@ void Acceptor::OnIn(int sockFd) {//这个sockFd就是lisenFd，没有用
         if (errno == EMFILE) {
             close(idleFd_);
             if ((connFd = accept(listenFd_, NULL, NULL)))
-                ERR_EXIT("accept");
+                ERR_EXIT("[ERRO] accept");
             close(connFd);
             idleFd_ = open("/dev/null", O_RDONLY | O_CLOEXEC);
         }
         else
-            ERR_EXIT("accept4");
+            ERR_EXIT("[ERRO] accept4");
     }
 
     callBack_->NewConnection(connFd);
 
     //连接成功
-    cout << "ip=" << inet_ntoa(cliAddr.sin_addr) << 
+    cout << "[INFO] ip=" << inet_ntoa(cliAddr.sin_addr) << 
         " port=" << ntohs(cliAddr.sin_port) << endl;
 }
 
@@ -73,7 +72,7 @@ int Acceptor::CreateAndListen() {
     idleFd_ = open("/dev/null", O_RDONLY | O_CLOEXEC);
     
     if ((listenFd_ = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP)) < 0)
-        ERR_EXIT("socket");
+        ERR_EXIT("[ERRO] socket");
     
     sockaddr_in srv_addr;
     bzero(&srv_addr, sizeof(srv_addr));
@@ -83,15 +82,15 @@ int Acceptor::CreateAndListen() {
 
     int on = 1;
     if (setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
-        ERR_EXIT("socket");
+        ERR_EXIT("[ERRO] socket");
 
     if (bind(listenFd_, (sockaddr*)&srv_addr, sizeof(srv_addr)) < 0)
-        ERR_EXIT("bind");
+        ERR_EXIT("[ERRO] bind");
     
     if (listen(listenFd_, SOMAXCONN) < 0)
-        ERR_EXIT("listen");
+        ERR_EXIT("[ERRO] listen");
 
-    Channel* pChannel = new Channel(epollFd_, listenFd_);
+    Channel* pChannel = new Channel(loop_, listenFd_);
     pChannel->SetCallBack(this);
     pChannel->EnableReading();
 

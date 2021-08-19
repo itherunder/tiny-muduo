@@ -2,16 +2,18 @@
 #define _TCP_CONNECTION_H_
 
 #include "IChannelCallBack.h"
+#include "EventLoop.h"
 #include "Channel.h"
+#include "Headers.h"
+#include "Define.h"
 
 class TcpConnection : public IChannelCallBack {
 public:
-    TcpConnection(int epollFd, int sockFd);
-    ~TcpConnection();
+    TcpConnection(EventLoop* loop, int sockFd);
+    virtual ~TcpConnection();
     virtual void OnIn(int sockFd);
 
 private:
-    int epollFd_;
     int sockFd_;
     Channel* channel_;
 };
