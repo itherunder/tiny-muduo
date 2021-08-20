@@ -33,8 +33,8 @@ void Acceptor::Start() {
 * 只需要在对应的 Channel 中将 this 指针存入其 callBack_
 * 目前还只是一个 echo 服务器
 */
-void Acceptor::OnIn(int sockFd) {//这个sockFd就是lisenFd，没有用
-    cout << "[INFO] OnIn listen from: " << sockFd << endl;
+void Acceptor::HandleRead() {//这个sockFd就是lisenFd，没有用
+    cout << "[INFO] HandleRead listen from: " << listenFd_ << endl;
     int connFd;
     sockaddr_in cliAddr;
     socklen_t cliLen;

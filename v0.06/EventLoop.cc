@@ -31,7 +31,7 @@ void EventLoop::Loop() {
                     }
                     connections_->erase(fd);
                 }
-                cout << "[INFO] Cur Connection: " << connections_->size() << endl;
+                cout << "[INFO] cur connection: " << connections_->size() << endl;
             }
         }
     }

@@ -34,7 +34,7 @@ void Acceptor::Start() {
 * 目前还只是一个 echo 服务器
 */
 void Acceptor::OnIn(int sockFd) {//这个sockFd就是lisenFd，没有用
-    cout << "[INFO] OnIn Listen From: " << sockFd << endl;
+    cout << "[INFO] OnIn listen from: " << sockFd << endl;
     int connFd;
     sockaddr_in cliAddr;
     socklen_t cliLen;

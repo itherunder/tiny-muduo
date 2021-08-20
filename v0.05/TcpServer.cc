@@ -27,7 +27,7 @@ void TcpServer::NewConnection(int sockFd) {
     //每个new 都要记得回收
     TcpConnection* connection = new TcpConnection(loop_, sockFd);
     connections_[sockFd] = connection;
-    cout << "[INFO] Cur Connection: " << connections_.size() << endl;
+    cout << "[INFO] cur connection: " << connections_.size() << endl;
 }
 
 void TcpServer::Start() {
