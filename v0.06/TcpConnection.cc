@@ -2,7 +2,8 @@
 
 TcpConnection::TcpConnection(EventLoop* loop, int sockFd)
     : sockFd_(sockFd)
-    , channel_(nullptr) {
+    , channel_(nullptr)
+    , user_(nullptr) {
     channel_ = new Channel(loop, sockFd);
     channel_->SetCallBack(this);
     channel_->EnableReading();
