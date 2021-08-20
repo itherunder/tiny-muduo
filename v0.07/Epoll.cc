@@ -14,6 +14,7 @@ Epoll::~Epoll() {
 
 void Epoll::Poll(vector<Channel*>& channels) {
     int nready = epoll_wait(epollFd_, &*events_.begin(), static_cast<int>(events_.size()), -1);
+    cout << "[DEBUG] nready: " << nready << endl;
     if (nready == -1)
         ERR_EXIT("[ERRO] epoll_wait");
     if (nready == static_cast<int>(events_.size()))

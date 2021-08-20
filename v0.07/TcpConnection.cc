@@ -44,7 +44,7 @@ void TcpConnection::HandleRead() {
         channel_->Close();
         return;//记得返回
     }
-    cout << buf << endl;
+    cout << "[RECV] " << buf << endl;
     inBuf_->append(buf, ret);
     user_->OnMessage(this, inBuf_);
 }
@@ -53,10 +53,13 @@ void TcpConnection::HandleRead() {
 void TcpConnection::HandleWrite() {
     int sockFd = channel_->GetSockFd();
     if (channel_->IsWriting()) {
+        //把之前outBuf_ 中堆积的没有发送的数据发送了
         int n = write(sockFd, outBuf_->c_str(), outBuf_->length());
         if (n > 0) {
             cout << "[INFO] write " << n << " bytes data again" << endl;
             *outBuf_ = outBuf_->substr(n);
+            //如果这次发送完了，就不再监听EPOLLOUT 事件
+            //否则的话内核会一直触发EPOLLOUT 事件
             if (outBuf_->empty())
                 channel_->DisableWriting();
         }

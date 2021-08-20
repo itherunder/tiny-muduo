@@ -1,17 +1,4 @@
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-
-#include <iostream>
-
-using namespace std;
+#include "Headers.h"
 
 #define ERR_EXIT(m) \
         do { \
@@ -32,6 +19,9 @@ int main() {
     
     if (connect(sock, (sockaddr*)&srv_addr, sizeof(srv_addr)) < 0)
         ERR_EXIT("connect");
+    
+    //不设置成非阻塞的，太麻烦了
+    // fcntl(sock, F_SETFL, SOCK_NONBLOCK);
 
     sockaddr_in local_addr;
     socklen_t addrlen = sizeof(local_addr);
@@ -44,10 +34,13 @@ int main() {
     char sendbuf[1024] = {0};
     char recvbuf[1024] = {0};
     while (fgets(sendbuf, sizeof(sendbuf), stdin) != NULL) {
+        // cout << "[DEBUG] sendbuf: " << sendbuf;
+        //这里如果EchoServer 没有返回内容会导致read 阻塞
         write(sock, sendbuf, strlen(sendbuf));
         read(sock, recvbuf, sizeof(recvbuf));
         
-        fputs(recvbuf, stdout);
+        // fputs(recvbuf, stdout);
+        cout << "[RECV] " << recvbuf << endl;
         memset(sendbuf, 0, sizeof(sendbuf));
         memset(recvbuf, 0, sizeof(recvbuf));
     }
