@@ -104,14 +104,14 @@ void TimerQueue::ReadTimerFd(int timerFd, Timestamp now) {
         ERR_EXIT("[ERRO] TimerQueue::ReadTimerFd read");
 }
 
-void TimerQueue::Reset(const vector<TimerQueue::Entry>& expired, Timestamp now) {
+void TimerQueue::Reset(const vector<Entry>& expired, Timestamp now) {
     for (auto entry : expired) {
         if (entry.second->IsRepeat()) {
             entry.second->MoveToNext();
             Insert(entry.second);
         } else {
             //如果不是循环任务，直接回收吧
-            cout << "[DEBUG] TimerQueue::Reset " << entry.second->IsRepeat() << endl;
+            // cout << "[DEBUG] TimerQueue::Reset " << entry.second->IsRepeat() << endl;
             delete entry.second;
         }
     }

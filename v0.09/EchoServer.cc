@@ -31,8 +31,8 @@ void EchoServer::OnMessage(TcpConnection* connection, Buffer& data) {
         connection->Send(msg);
     }
     // cout << "[DEBUG] EchoServer::OnMessage" << endl;
-    timer_ = loop_->RunEvery(0.5, this);
-    // timer_ = loop_->RunAfter(0.5, this);
+    timer_ = loop_->RunEvery(1.5, this);
+    // timer_ = loop_->RunAfter(1.5, this);
 }
 
 void EchoServer::OnWriteComplete(TcpConnection* connection) {
