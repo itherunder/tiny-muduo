@@ -14,7 +14,8 @@ public:
     virtual ~Acceptor();
     void SetCallBack(IAcceptorCallBack* callBack);
     void Start();
-    void HandleRead();
+    void HandleRead() override;
+    void HandleWrite() override;
 
 private:
     int CreateAndListen();

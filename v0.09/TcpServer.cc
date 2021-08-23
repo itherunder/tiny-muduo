@@ -6,7 +6,7 @@ TcpServer::TcpServer(EventLoop* loop)
     , user_(nullptr) {
     //为了能在loop_中回收内存
     loop_->SetConnections(&connections_);
-    cout << "[CONS] TcpServer ..." << endl;
+    // cout << "[CONS] TcpServer ..." << endl;
 }
 
 TcpServer::~TcpServer() {
@@ -21,7 +21,7 @@ TcpServer::~TcpServer() {
         delete acceptor_;
         acceptor_ = nullptr;
     }
-    cout << "[DECO] ~TcpServer ..." << endl;
+    // cout << "[DECO] ~TcpServer ..." << endl;
 }
 
 void TcpServer::NewConnection(int sockFd) {

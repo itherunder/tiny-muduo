@@ -3,7 +3,7 @@
 
 class IAcceptorCallBack {
 public:
-    virtual void NewConnection(int sockFd) {}
+    virtual void NewConnection(int sockFd) = 0;
 };
 
 #endif //_IACCEPTOR_CALLBACK_H_

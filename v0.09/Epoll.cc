@@ -5,16 +5,16 @@ Epoll::Epoll()
     epollFd_ = epoll_create1(EPOLL_CLOEXEC);
     if (epollFd_ < 0)
         ERR_EXIT("[ERRO] epoll_create1");
-    cout << "[CONS] Epoll ..." << endl;
+    // cout << "[CONS] Epoll ..." << endl;
 }
 
 Epoll::~Epoll() {
-    cout << "[DECO] ~Epoll ..." << endl;
+    // cout << "[DECO] ~Epoll ..." << endl;
 }
 
 void Epoll::Poll(vector<Channel*>& channels) {
     int nready = epoll_wait(epollFd_, &*events_.begin(), static_cast<int>(events_.size()), -1);
-    cout << "[DEBUG] Epoll::Poll nready: " << nready << endl;
+    cout << endl << "[DEBUG] Epoll::Poll nready: " << nready << endl;
     if (nready == -1)
         ERR_EXIT("[ERRO] Epoll::Poll epoll_wait");
     if (nready == static_cast<int>(events_.size()))

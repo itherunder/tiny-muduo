@@ -16,7 +16,7 @@ public:
     TcpServer(EventLoop* loop);
     virtual ~TcpServer();
     void Start();
-    virtual void NewConnection(int sockFd);
+    virtual void NewConnection(int sockFd) override;
     void SetCallback(IMuduoUser* user);
 
 private:

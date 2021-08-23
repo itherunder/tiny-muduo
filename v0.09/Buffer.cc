@@ -1,11 +1,11 @@
 #include "Buffer.h"
 
 Buffer::Buffer() {
-    cout << "[CONS] Buffer ..." << endl;
+    // cout << "[CONS] Buffer ..." << endl;
 }
 
 Buffer::~Buffer() {
-    cout << "[DECO] ~Buffer ..." << endl;
+    // cout << "[DECO] ~Buffer ..." << endl;
 }
 
 const char* Buffer::Peek() {

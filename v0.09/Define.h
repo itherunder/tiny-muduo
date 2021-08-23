@@ -9,6 +9,11 @@ class TcpConnection;
 class TcpServer;
 class EchoServer;
 class Buffer;
+class IChannelCallBack;
+class IRun;
+class IAcceptorCallBack;
+class Timestamp;
+class TimerQueue;
 
 #define MAX_EVENTS 500
 #define INIT_EVENTS 16

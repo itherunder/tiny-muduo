@@ -3,7 +3,7 @@
 
 class IRun {
 public:
-    virtual void Run() {}
+    virtual void Run(void* param) = 0;
 };
 
 #endif //_IRUN_H_

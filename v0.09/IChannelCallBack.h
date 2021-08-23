@@ -3,8 +3,8 @@
 
 class IChannelCallBack {
 public:
-    virtual void HandleRead() {}
-    virtual void HandleWrite() {}
+    virtual void HandleRead() = 0;
+    virtual void HandleWrite() = 0;
 };
 
 #endif //_ICHANNEL_CALLBACK_H_

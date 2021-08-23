@@ -4,12 +4,13 @@
 EventLoop::EventLoop()
     : quit_(false)
     , poller_(new Epoll())
-    , connections_(nullptr) {
+    , connections_(nullptr)
+    , timerQueue_(new TimerQueue(this)) {
     eventFd_ = CreateEventFd();
     channel_ = new Channel(this, eventFd_);
     channel_->SetCallBack(this);
     channel_->EnableReading();
-    cout << "[CONS] EventLoop ..." << endl;
+    // cout << "[CONS] EventLoop ..." << endl;
 }
 
 EventLoop::~EventLoop() {
@@ -21,7 +22,11 @@ EventLoop::~EventLoop() {
         delete channel_;
         channel_ = nullptr;
     }
-    cout << "[DECO] ~EventLoop ..." << endl;
+    if (timerQueue_) {
+        delete timerQueue_;
+        timerQueue_ = nullptr;
+    }
+    // cout << "[DECO] ~EventLoop ..." << endl;
 }
 
 void EventLoop::Loop() {
@@ -43,6 +48,7 @@ void EventLoop::Loop() {
             }
         }
         //处理OnWriteComplete 事件
+        //以及现在的timer 事件
         DoPendingFunctors();
     }
 }
@@ -51,15 +57,34 @@ void EventLoop::Update(Channel* channel, int op) {
     poller_->Update(channel, op);
 }
 
-void EventLoop::QueueLoop(IRun* run) {
-    pendingFunctors_.push_back(run);
+void EventLoop::QueueLoop(IRun* run, void* param) {
+    // cout << "[DEBUG] EventLoop::QueueLoop: " << pendingFunctors_.size() << endl;
+    pendingFunctors_.push_back({run, param});
     //说实话，感觉这里有没有都行啊
     // WakeUp();
 }
 
-
 void EventLoop::SetConnections(unordered_map<int, TcpConnection*>* connections) {
     connections_ = connections;
+}
+
+int64_t EventLoop::RunAt(Timestamp when, IRun* run) {
+    return timerQueue_->AddTimer(when, run, 0);
+}
+
+//delay是seconds
+int64_t EventLoop::RunAfter(double delay, IRun* run) {
+    // cout << "[DEBUG] EventLoop::RunAfter" << endl;
+    return timerQueue_->AddTimer(Timestamp::NowAfter(delay), run, 0);
+}
+
+//interval也是seconds?
+int64_t EventLoop::RunEvery(double interval, IRun* run) {
+    return timerQueue_->AddTimer(Timestamp::NowAfter(interval), run, interval);
+}
+
+void EventLoop::CancelTimer(int64_t timerId) {
+    timerQueue_->CancelTimer(timerId);
 }
 
 void EventLoop::HandleRead() {
@@ -80,10 +105,10 @@ int EventLoop::CreateEventFd() {
 }
 
 void EventLoop::DoPendingFunctors() {
-    vector<IRun*> runs;
-    runs.swap(pendingFunctors_);
-    for (IRun* pRun : runs)
-        pRun->Run();
+    vector<Runner> runners;
+    runners.swap(pendingFunctors_);
+    for (Runner runner : runners)
+        runner.DoRun();
 }
 
 void EventLoop::WakeUp() {

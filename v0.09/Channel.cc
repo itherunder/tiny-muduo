@@ -7,12 +7,12 @@ Channel::Channel(EventLoop* loop, int sockFd)
     , closed_(false)
     , loop_(loop)
     , callBack_(nullptr) {
-    cout << "[CONS] Channel ..." << endl;
+    // cout << "[CONS] Channel ..." << endl;
 }
 
 Channel::~Channel() {
     if (!closed_) Close();//从epoll中注销
-    cout << "[DECO] ~Channel ..." << endl;
+    // cout << "[DECO] ~Channel ..." << endl;
 }
 
 void Channel::SetCallBack(IChannelCallBack* callBack) {
@@ -44,11 +44,13 @@ void Channel::EnableReading() {
 }
 
 void Channel::EnableWriting() {
+    cout << "[DEBUG] Channel::EnableWriting" << endl;
     events_ |= EPOLLOUT;//默认还是边沿触发的
     Update(EPOLL_CTL_MOD);
 }
 
 void Channel::Close() {
+    close(sockFd_);//记得关闭
     //2.6.9版本后最后的 struct epoll_event & 参数可以为空指针
     loop_->Update(this, EPOLL_CTL_DEL);
     closed_ = true;//表示该Channel 监听的fd 已经关闭

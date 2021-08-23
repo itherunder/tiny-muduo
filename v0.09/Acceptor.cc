@@ -6,7 +6,7 @@ Acceptor::Acceptor(EventLoop* loop)
     , loop_(loop)
     , acceptChannel_(nullptr)
     , callBack_(nullptr) {
-    cout << "[CONS] Acceptor ..." << endl;
+    // cout << "[CONS] Acceptor ..." << endl;
 }
 
 Acceptor::~Acceptor() {
@@ -14,7 +14,7 @@ Acceptor::~Acceptor() {
         delete acceptChannel_;
         acceptChannel_ = nullptr;
     }
-    cout << "[DECO] ~Acceptor ..." << endl;
+    // cout << "[DECO] ~Acceptor ..." << endl;
 }
 
 void Acceptor::SetCallBack(IAcceptorCallBack* callBack) {
@@ -62,6 +62,9 @@ void Acceptor::HandleRead() {//这个sockFd就是lisenFd，没有用
         " port=" << ntohs(cliAddr.sin_port) << endl;
 }
 
+//暂时没用
+void Acceptor::HandleWrite() {}
+
 /*
 * 这里把创建了epollFd_, listenFd_ 并添加了listenFd_ 的Channel
 */
@@ -89,10 +92,6 @@ int Acceptor::CreateAndListen() {
     
     if (listen(listenFd_, SOMAXCONN) < 0)
         ERR_EXIT("[ERRO] Acceptor::CreateAndListen listen");
-
-    Channel* pChannel = new Channel(loop_, listenFd_);
-    pChannel->SetCallBack(this);
-    pChannel->EnableReading();
 
     return listenFd_;
 }

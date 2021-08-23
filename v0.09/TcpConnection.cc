@@ -1,14 +1,13 @@
 #include "TcpConnection.h"
 
 TcpConnection::TcpConnection(EventLoop* loop, int sockFd)
-    : sockFd_(sockFd)
-    , channel_(nullptr)
+    : channel_(nullptr)
     , user_(nullptr)
     , loop_(loop) {
     channel_ = new Channel(loop, sockFd);
     channel_->SetCallBack(this);
     channel_->EnableReading();
-    cout << "[CONS] TcpConnection ..." << endl;
+    // cout << "[CONS] TcpConnection ..." << endl;
 }
 
 TcpConnection::~TcpConnection() {
@@ -16,7 +15,7 @@ TcpConnection::~TcpConnection() {
         delete channel_;
         channel_ = nullptr;
     }
-    cout << "[DECO] ~TcpConnection ..." << endl;
+    // cout << "[DECO] ~TcpConnection ..." << endl;
 }
 
 //用户处理一下EPOLLIN 事件
@@ -31,11 +30,10 @@ void TcpConnection::HandleRead() {
         ERR_EXIT("[ERRO] TcpConnection::HandleRead read");
     if (ret == 0) {
         cout << "[INFO] TcpConnection::HandleRead client closed" << endl;
-        close(sockFd);//记得关闭
         channel_->Close();
         return;//记得返回
     }
-    cout << "[RECV] TcpConnection::HandleRead " << buf << endl;
+    cout << "[RECV] TcpConnection::HandleRead " << buf;
     inBuf_.Append(string(buf, ret));
     user_->OnMessage(this, inBuf_);
 }
@@ -53,13 +51,13 @@ void TcpConnection::HandleWrite() {
             //否则的话内核会一直触发EPOLLOUT 事件
             if (outBuf_.ReadableBytes() == 0) {
                 channel_->DisableWriting();
-                loop_->QueueLoop(this);
+                loop_->QueueLoop(this, nullptr);
             }
         }
     }
 }
 
-void TcpConnection::Run() {
+void TcpConnection::Run(void* param) {
     user_->OnWriteComplete(this);
 }
 
@@ -73,13 +71,14 @@ void TcpConnection::Established() {
 }
 
 void TcpConnection::Send(const string& message) {
-    int n = 0;
+    // cout << "[DEBUG] TcpConnection::Send " << message << " ";
+    int n = 0, sockFd = channel_->GetSockFd();
     if (outBuf_.ReadableBytes() == 0) {
-        n = write(sockFd_, message.c_str(), message.length());
+        n = write(sockFd, message.c_str(), message.length());
         if (n == -1)
             ERR_EXIT("[ERRO] TcpConnection::HandleRead write");
         if (n == static_cast<int>(message.length()))
-            loop_->QueueLoop(this);
+            loop_->QueueLoop(this, nullptr);
     }
     if (n < static_cast<int>(message.length())) {
         //一次没有发完的话，存到outBuf_ 中并监听EPOLLOUT 事件

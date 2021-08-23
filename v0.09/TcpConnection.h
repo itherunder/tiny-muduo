@@ -15,17 +15,16 @@ class TcpConnection : public IChannelCallBack
 public:
     TcpConnection(EventLoop* loop, int sockFd);
     virtual ~TcpConnection();
-    void HandleRead();
-    void HandleWrite();
+    void HandleRead() override;
+    void HandleWrite() override;
 
-    void Run();
+    void Run(void* param) override;
 
     void SetUser(IMuduoUser* user);
     void Established();
     void Send(const string& message);
 
 private:
-    int sockFd_;
     Channel* channel_;
     IMuduoUser* user_;
     EventLoop* loop_;
