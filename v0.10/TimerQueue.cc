@@ -1,30 +1,30 @@
 #include "TimerQueue.h"
 
-TimerQueue::TimerQueue(EventLoop* loop)
+TimerQueue::TimerQueue(EventLoop* pLoop)
     : timerFd_(CreateTimerFd())
-    , loop_(loop)
-    , channel_(new Channel(loop, timerFd_))
-    , addTimerWrapper_(new AddTimerWrapper(this))
-    , cancelTimerWrapper_(new CancelTimerWrapper(this)) {
-    channel_->SetCallBack(this);
-    channel_->EnableReading();
+    , pLoop_(pLoop)
+    , pTimerFdchannel_(new Channel(pLoop, timerFd_))
+    , pAddTimerWrapper_(new AddTimerWrapper(this))
+    , pCancelTimerWrapper_(new CancelTimerWrapper(this)) {
+    pTimerFdchannel_->SetCallBack(this);
+    pTimerFdchannel_->EnableReading();
     // cout << "[CONS] TimerQueue ..." << endl;
 }
 
 TimerQueue::~TimerQueue() {
-    if (channel_) {
-        delete channel_;
-        channel_ = nullptr;
+    if (pTimerFdchannel_) {
+        delete pTimerFdchannel_;
+        pTimerFdchannel_ = nullptr;
     }
-    if (addTimerWrapper_) {
-        delete addTimerWrapper_;
-        addTimerWrapper_ = nullptr;
+    if (pAddTimerWrapper_) {
+        delete pAddTimerWrapper_;
+        pAddTimerWrapper_ = nullptr;
     }
-    if (cancelTimerWrapper_) {
-        delete cancelTimerWrapper_;
-        cancelTimerWrapper_ = nullptr;
+    if (pCancelTimerWrapper_) {
+        delete pCancelTimerWrapper_;
+        pCancelTimerWrapper_ = nullptr;
     }
-    for (auto it = timers_.begin(); it != timers_.end(); ++it) {
+    for (auto it = pTimers_.begin(); it != pTimers_.end(); ++it) {
         if (it->second) {
             delete it->second;
         }
@@ -34,46 +34,45 @@ TimerQueue::~TimerQueue() {
 
 void TimerQueue::DoAddTimer(void* param) {
     // cout << "[DEBUG] TimerQueue::DoAddTimer" << endl;
-    Timer* timer = static_cast<Timer*>(param);
-    bool earliestChanged = Insert(timer);
+    Timer* pTimer = static_cast<Timer*>(param);
+    bool earliestChanged = Insert(pTimer);
     if (earliestChanged)
-        ResetTimerFd(timerFd_, timer->GetStamp());
+        ResetTimerFd(pTimer->GetStamp());
 }
 
 void TimerQueue::DoCancelTimer(void* param) {
-    Timer* timer = static_cast<Timer*>(param);
+    Timer* pTimer = static_cast<Timer*>(param);
     //避免取消错误的Timer
-    if (timer == nullptr) return;
-    Entry entry(timer->GetStamp(), timer);
-    for (auto it = timers_.begin(); it != timers_.end(); ++it) {
-        if (it->second == timer) {
-            timers_.erase(it);
-            delete timer; //回收Timer 内存
+    if (pTimer == nullptr) return;
+    Entry entry(pTimer->GetStamp(), pTimer);
+    for (auto it = pTimers_.begin(); it != pTimers_.end(); ++it) {
+        if (it->second == pTimer) {
+            pTimers_.erase(it);
+            delete pTimer; //回收Timer 内存
             //另外，在执行完一个interval = 0 的Timer 任务后也应该回收
             break;
         }
     }
 }
 
-int64_t TimerQueue::AddTimer(Timestamp when, IRun* run, double interval) {
+long TimerQueue::AddTimer(Timestamp when, IRun* pRun, double interval) {
     // cout << "[DEBUG] TimerQueue::AddTimer" << endl;
-    Timer* timer = new Timer(when, run, interval);
-    loop_->QueueLoop(addTimerWrapper_, timer);
-    return (int64_t)timer;
+    Timer* pTimer = new Timer(when, pRun, interval);
+    pLoop_->QueueLoop(pAddTimerWrapper_, pTimer);
+    return (long)pTimer;
 }
 
-void TimerQueue::CancelTimer(int64_t timerId) {
-    loop_->QueueLoop(cancelTimerWrapper_, (void*)timerId);
+void TimerQueue::CancelTimer(long timerId) {
+    pLoop_->QueueLoop(pCancelTimerWrapper_, (void*)timerId);
 }
 
 void TimerQueue::HandleRead() {
-    Timestamp now(Timestamp::Now());
-    ReadTimerFd(timerFd_, now);
+    ReadTimerFd();
     
-    vector<Entry> expired = GetExpired(now);
+    vector<Entry> expired = GetExpired();
     for (auto entry : expired)
         entry.second->Run();
-    Reset(expired, now);
+    Reset(expired);
 }
 
 //暂时没用
@@ -87,24 +86,24 @@ int TimerQueue::CreateTimerFd() {
     return timerFd_;
 }
 
-vector<TimerQueue::Entry> TimerQueue::GetExpired(Timestamp now) {
+vector<TimerQueue::Entry> TimerQueue::GetExpired() {
     vector<Entry> expired;
-    Entry entry(now, reinterpret_cast<Timer*>(UINTPTR_MAX));
-    auto end = timers_.lower_bound(entry);
+    Entry entry(Timestamp::Now(), reinterpret_cast<Timer*>(UINTPTR_MAX));
+    auto end = pTimers_.lower_bound(entry);
     //追加到expired 后面
-    copy(timers_.begin(), end, back_inserter(expired));
-    timers_.erase(timers_.begin(), end);
+    copy(pTimers_.begin(), end, back_inserter(expired));
+    pTimers_.erase(pTimers_.begin(), end);
     return expired;
 }
 
-void TimerQueue::ReadTimerFd(int timerFd, Timestamp now) {
-    uint64_t howMany;
-    ssize_t n = read(timerFd_, &howMany, sizeof(howMany));
-    if (n != sizeof(howMany))
+void TimerQueue::ReadTimerFd() {
+    uint64_t one = 1;
+    ssize_t n = read(timerFd_, &one, sizeof(one));
+    if (n != sizeof(one))
         ERR_EXIT("[ERRO] TimerQueue::ReadTimerFd read");
 }
 
-void TimerQueue::Reset(const vector<Entry>& expired, Timestamp now) {
+void TimerQueue::Reset(const vector<Entry>& expired) {
     for (auto entry : expired) {
         if (entry.second->IsRepeat()) {
             entry.second->MoveToNext();
@@ -116,13 +115,13 @@ void TimerQueue::Reset(const vector<Entry>& expired, Timestamp now) {
         }
     }
     Timestamp nextExpire;
-    if (!timers_.empty())
-        nextExpire = timers_.begin()->second->GetStamp();
+    if (!pTimers_.empty())
+        nextExpire = pTimers_.begin()->second->GetStamp();
     if (nextExpire.Valid())
-        ResetTimerFd(timerFd_, nextExpire);
+        ResetTimerFd(nextExpire);
 }
 
-void TimerQueue::ResetTimerFd(int timerFd, Timestamp stamp) {
+void TimerQueue::ResetTimerFd(Timestamp stamp) {
     itimerspec newValue;
     itimerspec oldValue;
     bzero(&newValue, sizeof(newValue));
@@ -133,15 +132,15 @@ void TimerQueue::ResetTimerFd(int timerFd, Timestamp stamp) {
         ERR_EXIT("[ERRO] TimerQueue::ResetTimerFd timerfd_settime");
 }
 
-bool TimerQueue::Insert(Timer* timer) {
+bool TimerQueue::Insert(Timer* pTimer) {
     bool earliestChanged = false;
-    Timestamp when = timer->GetStamp();
-    if (timers_.empty() || when < timers_.begin()->first)
+    Timestamp when = pTimer->GetStamp();
+    if (pTimers_.empty() || when < pTimers_.begin()->first)
         earliestChanged = true;
     pair<TimerSet::iterator, bool> result
-        = timers_.insert(Entry(when, timer));
+        = pTimers_.insert(Entry(when, pTimer));
     if (!result.second)
-        ERR_EXIT("[ERRO] TimerQueue::Insert timers_.insert error");
+        ERR_EXIT("[ERRO] TimerQueue::Insert pTimers_.insert error");
     return earliestChanged;
 }
 

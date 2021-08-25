@@ -10,9 +10,9 @@
 
 class Acceptor : public IChannelCallBack {
 public:
-    Acceptor(EventLoop* loop);
+    Acceptor(EventLoop* pLoop);
     virtual ~Acceptor();
-    void SetCallBack(IAcceptorCallBack* callBack);
+    void SetCallBack(IAcceptorCallBack* pCallBack);
     void Start();
     void HandleRead() override;
     void HandleWrite() override;
@@ -22,9 +22,9 @@ private:
 
     int listenFd_;
     int idleFd_;
-    EventLoop* loop_;
-    Channel* acceptChannel_;
-    IAcceptorCallBack* callBack_;
+    EventLoop* pLoop_;
+    Channel* pSocketAChannel_;
+    IAcceptorCallBack* pCallBack_;
 };
 
 #endif //_ACCEPTOR_H_

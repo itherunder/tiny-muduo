@@ -1,12 +1,12 @@
 #include "Channel.h"
 
-Channel::Channel(EventLoop* loop, int sockFd)
-    : sockFd_(sockFd)
+Channel::Channel(EventLoop* loop, int fd)
+    : fd_(fd)
     , events_(0)
     , revents_(0)
     , closed_(false)
-    , loop_(loop)
-    , callBack_(nullptr) {
+    , pLoop_(loop)
+    , pCallBack_(nullptr) {
     // cout << "[CONS] Channel ..." << endl;
 }
 
@@ -15,23 +15,23 @@ Channel::~Channel() {
     // cout << "[DECO] ~Channel ..." << endl;
 }
 
-void Channel::SetCallBack(IChannelCallBack* callBack) {
-    callBack_ = callBack;
+void Channel::SetCallBack(IChannelCallBack* pCallBack) {
+    pCallBack_ = pCallBack;
 }
 
 void Channel::HandleEvent() {
     if (revents_ & EPOLLIN)
-        callBack_->HandleRead();
+        pCallBack_->HandleRead();
     if (revents_ & EPOLLOUT)
-        callBack_->HandleWrite();
+        pCallBack_->HandleWrite();
 }
 
 void Channel::SetRevents(int revents) {
     revents_ = revents;
 }
 
-int Channel::GetSockFd() {
-    return sockFd_;
+int Channel::GetFd() {
+    return fd_;
 }
 
 int Channel::GetEvents() {
@@ -50,9 +50,9 @@ void Channel::EnableWriting() {
 }
 
 void Channel::Close() {
-    close(sockFd_);//记得关闭
+    close(fd_);//记得关闭
     //2.6.9版本后最后的 struct epoll_event & 参数可以为空指针
-    loop_->Update(this, EPOLL_CTL_DEL);
+    pLoop_->Update(this, EPOLL_CTL_DEL);
     closed_ = true;//表示该Channel 监听的fd 已经关闭
 }
 
@@ -70,5 +70,5 @@ bool Channel::IsWriting() {
 }
 
 void Channel::Update(int op) {
-    loop_->Update(this, op);
+    pLoop_->Update(this, op);
 }

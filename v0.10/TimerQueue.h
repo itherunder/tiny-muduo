@@ -12,10 +12,10 @@ class TimerQueue : public IChannelCallBack {
 public:
     class Timer {
     public:
-        Timer(Timestamp stamp, IRun* run, double interval)
+        Timer(Timestamp stamp, IRun* pRun, double interval)
             : stamp_(stamp)
             , id_((int64_t)&stamp)
-            , run_(run)
+            , pRun_(pRun)
             , interval_(interval) {
             cout << "[CONS] Timer ..." << endl;
         }
@@ -29,7 +29,7 @@ public:
             return id_;
         }
         void Run() {
-            run_->Run(this);
+            pRun_->Run(this);
         }
         bool IsRepeat() {
             return interval_ > 0;
@@ -39,49 +39,49 @@ public:
         }
     private:
         Timestamp stamp_;
-        int64_t id_;
-        IRun* run_;
+        long id_;
+        IRun* pRun_;
         double interval_;//seconds;
     };
 
     class AddTimerWrapper : public IRun {
     public:
-        AddTimerWrapper(TimerQueue* queue)
-            : queue_(queue) {
+        AddTimerWrapper(TimerQueue* pTimerQueue)
+            : pTimerQueue_(pTimerQueue) {
             // cout << "[CONS] AddTimerWrapper ..." << endl;
         }
         virtual ~AddTimerWrapper() {
             // cout << "[DECO] ~AddTimerWrapper ..." << endl;
         }
         void Run(void* param) override {
-            queue_->DoAddTimer(param);
+            pTimerQueue_->DoAddTimer(param);
         }
     private:
-        TimerQueue* queue_;
+        TimerQueue* pTimerQueue_;
     };
 
     class CancelTimerWrapper : public IRun {
     public:
-        CancelTimerWrapper(TimerQueue* queue)
-            : queue_(queue) {
+        CancelTimerWrapper(TimerQueue* pTimerQueue)
+            : pTimerQueue_(pTimerQueue) {
             // cout << "[CONS] CancelTimerWrapper ..." << endl;
         }
         virtual ~CancelTimerWrapper() {
             // cout << "[DECO] ~CancelTimerWrapper ..." << endl;
         }
         void Run(void* param) override {
-            queue_->DoCancelTimer(param);
+            pTimerQueue_->DoCancelTimer(param);
         }
     private:
-        TimerQueue* queue_;
+        TimerQueue* pTimerQueue_;
     };
 
-    TimerQueue(EventLoop* loop);
+    TimerQueue(EventLoop* pLoop);
     virtual ~TimerQueue();
     void DoAddTimer(void* param);
     void DoCancelTimer(void* param);
-    int64_t AddTimer(Timestamp when, IRun* run, double interval);
-    void CancelTimer(int64_t timerId);
+    long AddTimer(Timestamp when, IRun* pRun, double interval);
+    void CancelTimer(long pTimerId);
     void HandleRead() override;
     void HandleWrite() override;
 
@@ -90,19 +90,19 @@ private:
     typedef set<Entry> TimerSet;
 
     int CreateTimerFd();
-    vector<TimerQueue::Entry> GetExpired(Timestamp now);
-    void ReadTimerFd(int timerFd, Timestamp now);
-    void Reset(const vector<TimerQueue::Entry>& expired, Timestamp now);
-    void ResetTimerFd(int timerFd, Timestamp stamp);
-    bool Insert(Timer* timer);
+    vector<TimerQueue::Entry> GetExpired();
+    void ReadTimerFd();
+    void Reset(const vector<TimerQueue::Entry>& expired);
+    void ResetTimerFd(Timestamp stamp);
+    bool Insert(Timer* pTimer);
     timespec HowMuchTimeFromNow(Timestamp when);
 
     int timerFd_;
-    TimerSet timers_;
-    EventLoop* loop_;
-    Channel* channel_;
-    AddTimerWrapper* addTimerWrapper_;
-    CancelTimerWrapper* cancelTimerWrapper_;
+    TimerSet pTimers_;
+    EventLoop* pLoop_;
+    Channel* pTimerFdchannel_;
+    AddTimerWrapper* pAddTimerWrapper_;
+    CancelTimerWrapper* pCancelTimerWrapper_;
 };
 
 #endif //_TIMER_QUEUE_H_

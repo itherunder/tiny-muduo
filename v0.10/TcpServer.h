@@ -13,17 +13,17 @@ using namespace std;
 
 class TcpServer : public IAcceptorCallBack {
 public:
-    TcpServer(EventLoop* loop);
+    TcpServer(EventLoop* pLoop);
     virtual ~TcpServer();
     void Start();
     virtual void NewConnection(int sockFd) override;
-    void SetCallback(IMuduoUser* user);
+    void SetCallback(IMuduoUser* pUser);
 
 private:
-    unordered_map<int, TcpConnection*> connections_;
-    EventLoop* loop_;
-    Acceptor* acceptor_;
-    IMuduoUser* user_;
+    unordered_map<int, TcpConnection*> conns_;
+    EventLoop* pLoop_;
+    Acceptor* pAcceptor_;
+    IMuduoUser* pUser_;
 };
 
 #endif //_TCP_SERVER_H_

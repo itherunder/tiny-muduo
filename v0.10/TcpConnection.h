@@ -13,21 +13,21 @@
 class TcpConnection : public IChannelCallBack
                     , public IRun {
 public:
-    TcpConnection(EventLoop* loop, int sockFd);
+    TcpConnection(EventLoop* pLoop, int sockFd);
     virtual ~TcpConnection();
     void HandleRead() override;
     void HandleWrite() override;
 
     void Run(void* param) override;
 
-    void SetUser(IMuduoUser* user);
+    void SetUser(IMuduoUser* pUser);
     void Established();
     void Send(const string& message);
 
 private:
-    Channel* channel_;
-    IMuduoUser* user_;
-    EventLoop* loop_;
+    Channel* pSocketChannel_;
+    IMuduoUser* pUser_;
+    EventLoop* pLoop_;
     Buffer inBuf_;
     Buffer outBuf_;
 };

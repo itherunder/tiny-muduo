@@ -11,8 +11,8 @@ class EventLoop : public IChannelCallBack {
 public:
     class Runner {
     public:
-        Runner(IRun* run, void* param)
-            : run_(run)
+        Runner(IRun* pRun, void* param)
+            : pRun_(pRun)
             , param_(param) {
             // cout << "[CONS] Runner ..." << endl;
         }
@@ -20,23 +20,23 @@ public:
             // cout << "[DECO] ~Runner ..." << endl;
         }
         void DoRun() {
-            run_->Run(param_);
+            pRun_->Run(param_);
         }
     private:
-        IRun* run_;//如果是一个定时任务，run_是一个
-        //如果是一个定时任务，param_是一个Timer，否则为nullptr
+        IRun* pRun_;//如果是一个定时任务，pRun_是一个
+        //如果是一个定时任务，param_是一个Timer*，否则为nullptr
         void* param_;
     };
     EventLoop();
     virtual ~EventLoop();
     void Loop();
-    void Update(Channel* channel, int op);
-    void QueueLoop(IRun* run, void* param);
-    void SetConnections(unordered_map<int, TcpConnection*>* connections);
-    int64_t RunAt(Timestamp when, IRun* run);
-    int64_t RunAfter(double delay, IRun* run);
-    int64_t RunEvery(double interval, IRun* run);
-    void CancelTimer(int64_t timerId);
+    void Update(Channel* pChannel, int op);
+    void QueueLoop(IRun* pRun, void* param);
+    void SetConns(unordered_map<int, TcpConnection*>* conns);
+    long RunAt(Timestamp when, IRun* pRun);
+    long RunAfter(double delay, IRun* pRun);
+    long RunEvery(double interval, IRun* pRun);
+    void CancelTimer(long timerId);
 
     void HandleRead() override;
     void HandleWrite() override;
@@ -48,11 +48,11 @@ private:
 
     bool quit_;
     int eventFd_;
-    Channel* channel_;
-    Epoll* poller_;
-    unordered_map<int, TcpConnection*>* connections_;
-    vector<Runner> pendingFunctors_;
-    TimerQueue* timerQueue_;
+    Channel* pEventFdChannel_;
+    Epoll* pPoller_;
+    unordered_map<int, TcpConnection*>* conns_;
+    vector<Runner> vPendingFunctors_;
+    TimerQueue* pTimerQueue_;
 };
 
 #endif //_EVENT_LOOP_H_

@@ -1,31 +1,31 @@
 #include "Acceptor.h"
 
-Acceptor::Acceptor(EventLoop* loop)
+Acceptor::Acceptor(EventLoop* pLoop)
     : listenFd_(0)
     , idleFd_(0)
-    , loop_(loop)
-    , acceptChannel_(nullptr)
-    , callBack_(nullptr) {
+    , pLoop_(pLoop)
+    , pSocketAChannel_(nullptr)
+    , pCallBack_(nullptr) {
     // cout << "[CONS] Acceptor ..." << endl;
 }
 
 Acceptor::~Acceptor() {
-    if (acceptChannel_) {
-        delete acceptChannel_;
-        acceptChannel_ = nullptr;
+    if (pSocketAChannel_) {
+        delete pSocketAChannel_;
+        pSocketAChannel_ = nullptr;
     }
     // cout << "[DECO] ~Acceptor ..." << endl;
 }
 
-void Acceptor::SetCallBack(IAcceptorCallBack* callBack) {
-    callBack_ = callBack;
+void Acceptor::SetCallBack(IAcceptorCallBack* pCallBack) {
+    pCallBack_ = pCallBack;
 }
 
 void Acceptor::Start() {
     listenFd_ = CreateAndListen();
-    acceptChannel_ = new Channel(loop_, listenFd_);
-    acceptChannel_->SetCallBack(this);
-    acceptChannel_->EnableReading();
+    pSocketAChannel_ = new Channel(pLoop_, listenFd_);
+    pSocketAChannel_->SetCallBack(this);
+    pSocketAChannel_->EnableReading();
 }
 
 /*
@@ -55,7 +55,7 @@ void Acceptor::HandleRead() {//这个sockFd就是lisenFd，没有用
             ERR_EXIT("[ERRO] Acceptor::HandleRead accept4");
     }
 
-    callBack_->NewConnection(connFd);
+    pCallBack_->NewConnection(connFd);
 
     //连接成功
     cout << "[INFO] Acceptor::HandleRead ip=" << inet_ntoa(cliAddr.sin_addr) << 
@@ -83,8 +83,8 @@ int Acceptor::CreateAndListen() {
     srv_addr.sin_port = htons(1116);
     srv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    int on = 1;
-    if (setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
+    int one = 1;
+    if (setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) < 0)
         ERR_EXIT("[ERRO] Acceptor::CreateAndListen setsockopt");
 
     if (bind(listenFd_, (sockaddr*)&srv_addr, sizeof(srv_addr)) < 0)

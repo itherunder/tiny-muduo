@@ -12,7 +12,7 @@ Epoll::~Epoll() {
     // cout << "[DECO] ~Epoll ..." << endl;
 }
 
-void Epoll::Poll(vector<Channel*>& channels) {
+void Epoll::Poll(vector<Channel*>& pChannels) {
     int nready = epoll_wait(epollFd_, &*events_.begin(), static_cast<int>(events_.size()), -1);
     cout << endl << "[DEBUG] Epoll::Poll nready: " << nready << endl;
     if (nready == -1)
@@ -22,14 +22,14 @@ void Epoll::Poll(vector<Channel*>& channels) {
     for (int i = 0; i < nready; ++i) {
         Channel* pChannel = static_cast<Channel*>(events_[i].data.ptr);
         pChannel->SetRevents(events_[i].events);
-        channels.push_back(pChannel);
+        pChannels.push_back(pChannel);
     }
 }
 
-void Epoll::Update(Channel* channel, int op) {
+void Epoll::Update(Channel* pChannel, int op) {
     epoll_event event;
-    event.data.ptr = channel;
-    event.events = channel->GetEvents();
-    int fd = channel->GetSockFd();
+    event.data.ptr = pChannel;
+    event.events = pChannel->GetEvents();
+    int fd = pChannel->GetFd();
     epoll_ctl(epollFd_, op, fd, &event);
 }

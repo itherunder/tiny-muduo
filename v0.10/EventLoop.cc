@@ -3,48 +3,48 @@
 
 EventLoop::EventLoop()
     : quit_(false)
-    , poller_(new Epoll())
-    , connections_(nullptr)
-    , timerQueue_(new TimerQueue(this)) {
+    , pPoller_(new Epoll())
+    , conns_(nullptr)
+    , pTimerQueue_(new TimerQueue(this)) {
     eventFd_ = CreateEventFd();
-    channel_ = new Channel(this, eventFd_);
-    channel_->SetCallBack(this);
-    channel_->EnableReading();
+    pEventFdChannel_ = new Channel(this, eventFd_);
+    pEventFdChannel_->SetCallBack(this);
+    pEventFdChannel_->EnableReading();
     // cout << "[CONS] EventLoop ..." << endl;
 }
 
 EventLoop::~EventLoop() {
-    if (poller_) {
-        delete poller_;
-        poller_ = nullptr;
+    if (pPoller_) {
+        delete pPoller_;
+        pPoller_ = nullptr;
     }
-    if (channel_) {
-        delete channel_;
-        channel_ = nullptr;
+    if (pEventFdChannel_) {
+        delete pEventFdChannel_;
+        pEventFdChannel_ = nullptr;
     }
-    if (timerQueue_) {
-        delete timerQueue_;
-        timerQueue_ = nullptr;
+    if (pTimerQueue_) {
+        delete pTimerQueue_;
+        pTimerQueue_ = nullptr;
     }
     // cout << "[DECO] ~EventLoop ..." << endl;
 }
 
 void EventLoop::Loop() {
     while (!quit_) {
-        vector<Channel*> channels;//先把指针存起来，最后再一个一个调HandleEvent
-        poller_->Poll(channels);
-        for (Channel* pChannel : channels) {
+        vector<Channel*> pChannels;//先把指针存起来，最后再一个一个调HandleEvent
+        pPoller_->Poll(pChannels);
+        for (Channel* pChannel : pChannels) {
             pChannel->HandleEvent();
             if (pChannel->IsClosed()) {//处理完事件后，如果该fd 已经close 了就回收内存
-                int fd = pChannel->GetSockFd();
-                if (connections_->count(fd)) {
-                    if ((*connections_)[fd]) {
-                        delete (*connections_)[fd];
-                        (*connections_)[fd] = nullptr;
+                int fd = pChannel->GetFd();
+                if (conns_->count(fd)) {
+                    if ((*conns_)[fd]) {
+                        delete (*conns_)[fd];
+                        (*conns_)[fd] = nullptr;
                     }
-                    connections_->erase(fd);
+                    conns_->erase(fd);
                 }
-                cout << "[INFO] EventLoop::Loop cur connection: " << connections_->size() << endl;
+                cout << "[INFO] EventLoop::Loop cur connection: " << conns_->size() << endl;
             }
         }
         //处理OnWriteComplete 事件
@@ -53,38 +53,38 @@ void EventLoop::Loop() {
     }
 }
 
-void EventLoop::Update(Channel* channel, int op) {
-    poller_->Update(channel, op);
+void EventLoop::Update(Channel* pChannel, int op) {
+    pPoller_->Update(pChannel, op);
 }
 
-void EventLoop::QueueLoop(IRun* run, void* param) {
+void EventLoop::QueueLoop(IRun* pRun, void* param) {
     // cout << "[DEBUG] EventLoop::QueueLoop: " << pendingFunctors_.size() << endl;
-    pendingFunctors_.push_back({run, param});
-    //说实话，感觉这里有没有都行啊
+    vPendingFunctors_.push_back({pRun, param});
+    //说实话，感觉这里有没有都行啊，确实，好像是多线程用的
     // WakeUp();
 }
 
-void EventLoop::SetConnections(unordered_map<int, TcpConnection*>* connections) {
-    connections_ = connections;
+void EventLoop::SetConns(unordered_map<int, TcpConnection*>* conns) {
+    conns_ = conns;
 }
 
-int64_t EventLoop::RunAt(Timestamp when, IRun* run) {
-    return timerQueue_->AddTimer(when, run, 0);
+long EventLoop::RunAt(Timestamp when, IRun* pRun) {
+    return pTimerQueue_->AddTimer(when, pRun, 0);
 }
 
 //delay是seconds
-int64_t EventLoop::RunAfter(double delay, IRun* run) {
+long EventLoop::RunAfter(double delay, IRun* pRun) {
     // cout << "[DEBUG] EventLoop::RunAfter" << endl;
-    return timerQueue_->AddTimer(Timestamp::NowAfter(delay), run, 0);
+    return pTimerQueue_->AddTimer(Timestamp::NowAfter(delay), pRun, 0);
 }
 
 //interval也是seconds?
-int64_t EventLoop::RunEvery(double interval, IRun* run) {
-    return timerQueue_->AddTimer(Timestamp::NowAfter(interval), run, interval);
+long EventLoop::RunEvery(double interval, IRun* pRun) {
+    return pTimerQueue_->AddTimer(Timestamp::NowAfter(interval), pRun, interval);
 }
 
-void EventLoop::CancelTimer(int64_t timerId) {
-    timerQueue_->CancelTimer(timerId);
+void EventLoop::CancelTimer(long timerId) {
+    pTimerQueue_->CancelTimer(timerId);
 }
 
 void EventLoop::HandleRead() {
@@ -106,7 +106,7 @@ int EventLoop::CreateEventFd() {
 
 void EventLoop::DoPendingFunctors() {
     vector<Runner> runners;
-    runners.swap(pendingFunctors_);
+    runners.swap(vPendingFunctors_);
     for (Runner runner : runners)
         runner.DoRun();
 }

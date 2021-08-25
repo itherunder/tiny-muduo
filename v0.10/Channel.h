@@ -8,12 +8,12 @@
 
 class Channel {
 public:
-    Channel(EventLoop* loop, int sockFd);
+    Channel(EventLoop* pLoop, int sockFd);
     virtual ~Channel();
-    void SetCallBack(IChannelCallBack* callBack);
+    void SetCallBack(IChannelCallBack* pCallBack);
     void HandleEvent();
     void SetRevents(int revents);
-    int GetSockFd();
+    int GetFd();
     int GetEvents();
     void EnableReading();
     void EnableWriting();
@@ -24,12 +24,12 @@ public:
 
 private:
     void Update(int op);
-    int sockFd_;
+    int fd_;
     int events_;
     int revents_;
     bool closed_;
-    EventLoop* loop_;
-    IChannelCallBack* callBack_;
+    EventLoop* pLoop_;
+    IChannelCallBack* pCallBack_;
 };
 
 #endif //_CHANNEL_H_

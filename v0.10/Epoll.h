@@ -9,8 +9,8 @@ class Epoll {
 public:
     Epoll();
     virtual ~Epoll();
-    void Poll(vector<Channel*>& channels);
-    void Update(Channel* channel, int op);
+    void Poll(vector<Channel*>& pChannels);
+    void Update(Channel* pChannel, int op);
 
 private:
     int epollFd_;

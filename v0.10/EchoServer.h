@@ -8,19 +8,19 @@ class EchoServer
     : public IMuduoUser
     , public IRun {
 public:
-    EchoServer(EventLoop* loop);
+    EchoServer(EventLoop* pLoop);
     virtual ~EchoServer();
     void Start();
-    void OnConnection(TcpConnection* connection) override;
-    void OnMessage(TcpConnection* connection, Buffer& data) override;
-    void OnWriteComplete(TcpConnection* connection) override;
+    void OnConnection(TcpConnection* pConn) override;
+    void OnMessage(TcpConnection* pConn, Buffer& data) override;
+    void OnWriteComplete(TcpConnection* pConn) override;
 
     void Run(void* param) override;
 
 private:
-    EventLoop* loop_;
+    EventLoop* pLoop_;
     TcpServer tcpServer_;
-    int64_t timer_;
+    long timerId_;
     int index_;
 };
 

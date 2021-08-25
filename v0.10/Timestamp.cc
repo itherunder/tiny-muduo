@@ -9,7 +9,6 @@ Timestamp::~Timestamp() {
     // cout << "[DECO] ~Timestamp ..." << endl;
 }
 
-
 bool Timestamp::Valid() {
     return microSecondsSinceEpoch_ > 0;
 }
